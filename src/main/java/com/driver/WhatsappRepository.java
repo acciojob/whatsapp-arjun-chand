@@ -6,82 +6,89 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class WhatsappRepository {
-
     //Assume that each user belongs to at most one group
     //You can use the below mentioned hashmaps or delete these and create your own.
+
     private HashMap<Group, List<User>> groupUserMap;
-    private List<User> userDB;
     private HashMap<Group, List<Message>> groupMessageMap;
     private HashMap<Message, User> senderMap;
     private HashMap<Group, User> adminMap;
     private HashSet<String> userMobile;
     private int customGroupCount;
     private int messageId;
-    int groupCount = 0;
 
-    public WhatsappRepository(){
-        this.groupMessageMap = new HashMap<Group, List<Message>>();
-        this.groupUserMap = new HashMap<Group, List<User>>();
-        this.senderMap = new HashMap<Message, User>();
-        this.adminMap = new HashMap<Group, User>();
+    public WhatsappRepository() {
+        this.groupMessageMap = new HashMap<>();
+        this.groupUserMap = new HashMap<>();
+        this.senderMap = new HashMap<>();
+        this.adminMap = new HashMap<>();
         this.userMobile = new HashSet<>();
         this.customGroupCount = 0;
         this.messageId = 0;
     }
-    void createUser(String name, String mobNo) throws Exception{
-        if(userMobile.contains(mobNo))
+
+    public void createUser(String name, String mobile) throws Exception {
+        if (userMobile.contains(mobile))
             throw new Exception("User already exists");
-        User user = new User(name, mobNo);
-        userMobile.add(mobNo);
+
+        User user = new User(name, mobile);
+        userMobile.add(mobile);
     }
-    Group createGroup(List<User> users){
+
+    public Group createGroup(List<User> users) {
         Group group = new Group();
-        if(users.size() == 2){
-            group.setName(users.get(0).getName());
-        }
+
+        if (users.size() == 2)
+            group.setName(users.get(1).getName());
         else {
             ++customGroupCount;
-            group.setName("Group "+customGroupCount);
+            group.setName("Group " + customGroupCount);
         }
+
         group.setNumberOfParticipants(users.size());
 
-        adminMap.put(group,users.get(0));
-        groupUserMap.put(group,users);
+        adminMap.put(group, users.get(0));
+        groupUserMap.put(group, users);
         groupMessageMap.put(group, new ArrayList<>());
 
         return group;
     }
 
-    int createMessage(String content){
+    public int createMessage(String content) {
         ++messageId;
+
         Message message = new Message(messageId, content);
         message.setTimestamp(new Date());
 
         return message.getId();
     }
-    int sendMessage(Message message, User sender, Group group)throws Exception{
-        if (!groupUserMap.containsKey(group))
+
+    public int sendMessage(Message message, User sender, Group group) throws Exception {
+        if (!adminMap.containsKey(group))
             throw new Exception("Group does not exist");
 
-        if (!groupUserMap.containsValue(sender))
+        if (!groupUserMap.get(group).contains(sender))
             throw new Exception("You are not allowed to send message");
 
-        senderMap.put(message,sender);
+        senderMap.put(message, sender);
         groupMessageMap.get(group).add(message);
 
         return groupMessageMap.get(group).size();
     }
 
-    void changeAdmin(User approver, User user, Group group) throws Exception{
-        if (!groupUserMap.containsKey(group))
+    public void changeAdmin(User approver, User user, Group group) throws Exception {
+        if (!adminMap.containsKey(group))
             throw new Exception("Group does not exist");
-        if (!adminMap.containsKey(approver))
+
+        if (!adminMap.get(group).equals(approver))
             throw new Exception("Approver does not have rights");
-        if (!groupUserMap.containsValue(user))
+
+        if (!groupUserMap.get(group).contains(user))
             throw new Exception("User is not a participant");
 
-        adminMap.put(group,user);
+        adminMap.put(group, user);
     }
+
     public int removeUser(User user) throws Exception {
         Group group = null;
         for (Group gr : groupUserMap.keySet())
@@ -120,7 +127,8 @@ public class WhatsappRepository {
         if (messageList.size() < k)
             throw new Exception("K is greater than the number of messages");
 
+        messageList.sort(Comparator.comparingInt(Message::getContentLength));
+
         return messageList.get(k).getContent();
     }
 }
-
